@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract GamingMembership is ERC20, Ownable {
+    enum SubscriptionLevel { BRONZE, SILVER, GOLD }
+
+    event SubscriptionRedeemed(address indexed account, SubscriptionLevel subscriptionLevel, uint256 subscriptionCost);
+
+    mapping(address => SubscriptionLevel) public userSubscriptions;
+
+    uint256 public constant Bronze_level = 100;
+    uint256 public constant Silver_level = 200;
+    uint256 public constant Gold_level = 500;
+
+    constructor(address initialOwner) ERC20("GAMER", "GMR") Ownable(initialOwner) {}
+
+    function mintTokens(address to, uint256 total) public onlyOwner {
+        _mint(to, total);
+    }
+
+    function burnTokens(uint256 total) public {
+        require(total > 0, "The total to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= total, "Insufficient funds for token destruction");
+        _burn(msg.sender, total);
+    }
+
+    function redeemSubscription(uint8 subscriptionNumber) public {
+        require(subscriptionNumber >= 1 && subscriptionNumber <= 3, "Invalid subscription number");
+
+        SubscriptionLevel subscription;
+        uint256 subscriptionCost;
+
+        if (subscriptionNumber == 1) {
+            require(balanceOf(msg.sender) >= Bronze_level, "Insufficient funds for subscription redemption");
+            subscription = SubscriptionLevel.BRONZE;
+            subscriptionCost = Bronze_level;
+            _burn(msg.sender, subscriptionCost);
+        } else if (subscriptionNumber == 2) {
+            require(balanceOf(msg.sender) >= Silver_level, "Insufficient funds for subscription redemption");
+            subscription = SubscriptionLevel.SILVER;
+            subscriptionCost = Silver_level;
+            _burn(msg.sender, subscriptionCost);
+        } else {
+            require(balanceOf(msg.sender) >= Gold_level, "Insufficient funds for subscription redemption");
+            subscription = SubscriptionLevel.GOLD;
+            subscriptionCost = Gold_level;
+            _burn(msg.sender, subscriptionCost);
+        }
+
+        userSubscriptions[msg.sender] = subscription;
+        emit SubscriptionRedeemed(msg.sender, subscription, subscriptionCost);
+    }
+
+    function transferSubscriptionTokens(address user, uint256 total) external {
+        require(user != address(0), "Invalid user address provided");
+        require(balanceOf(msg.sender) >= total, "Insufficient funds for token transfer");
+        _transfer(msg.sender, user, total);
+    }
+}
